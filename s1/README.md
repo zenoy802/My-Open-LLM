@@ -153,7 +153,14 @@ for i, p in enumerate(prompts):
 ```
 
 ##### demo results
+
+For ignoring end-of-thinking token once, the model's correction was wrong. For ignoring end-of-thinking token twice, the model's correction was right again.
+
+budget_forcing_once:
+
 ![budget_forcing_once](inference/budget_forcing_once.pic.jpg)
+
+budget_forcing_twice:
 
 ![budget_forcing_twice](inference/budget_forcing_twice.pic.jpg)
 
