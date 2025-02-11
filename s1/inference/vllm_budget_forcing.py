@@ -7,7 +7,7 @@ os.environ['HF_HOME'] = '/root/autodl-tmp/.cache/'
 # Decide on a token limit for thinking; As the model's max tokens is 32768, 32000 usually ensures there is enough space for the model to still answer
 MAX_TOKENS_THINKING = 10000
 # Decide how often to ignore end-of-thinking token
-NUM_IGNORE = 1
+NUM_IGNORE = 2
 
 model = LLM(
     # "simplescaling/s1-32B",
@@ -49,6 +49,8 @@ for i, p in enumerate(prompts):
         prompt,
         sampling_params=sampling_params
     )
+    print("Initial Generation:")
+    print(prompt + o[0].outputs[0].text)
     ignore_str = "Wait"
     max_tokens_thinking_tmp = MAX_TOKENS_THINKING
     # Num of times to skip stop token
@@ -66,6 +68,8 @@ for i, p in enumerate(prompts):
             prompt,
             sampling_params=sampling_params
         )
+        print(f"Skip stop token {i}th time:")
+        print(prompt + o[0].outputs[0].text)
     ### Final answer ###
     prompt += o[0].outputs[0].text # You can also append "Final Answer:" here like we do for some evaluations to prevent the model from just continuing to reason in its answer when early exiting
     stop_token_ids = tok("<|im_end|>")["input_ids"]
