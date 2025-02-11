@@ -155,7 +155,7 @@ for i, p in enumerate(prompts):
 ##### demo results
 ![budget_forcing_once](inference/budget_forcing_once.pic.jpg)
 
-![budget_forcing_twice](visuals/budget_forcing_twice.pic.jpg)
+![budget_forcing_twice](inference/budget_forcing_twice.pic.jpg)
 
 #### transformers
 
