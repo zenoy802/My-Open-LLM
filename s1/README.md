@@ -152,6 +152,11 @@ for i, p in enumerate(prompts):
     print(prompt + o[0].outputs[0].text)
 ```
 
+##### demo results
+![budget_forcing_once](inference/budget_forcing_once.pic.jpg)
+
+![budget_forcing_twice](visuals/budget_forcing_twice.pic.jpg)
+
 #### transformers
 
 Install the `transformers` & `torch` libraries and run:
