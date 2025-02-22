@@ -4,15 +4,14 @@
 #
 import re
 import torch
-from datasets import load_dataset, Dataset
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from peft import LoraConfig
+from modelscope import AutoTokenizer, AutoModelForCausalLM
+from modelscope.msdatasets import MsDataset
 from trl import GRPOConfig, GRPOTrainer
 
 # Load and prep dataset
 
 SYSTEM_PROMPT = """
-Respond in the following format:
+You need to answer in XML format, include <reasoning> and <answer>, respond in the following format:
 <reasoning>
 ...
 </reasoning>
@@ -41,8 +40,8 @@ def extract_hash_answer(text: str) -> str | None:
     return text.split("####")[1].strip().replace(",", "").replace("$", "")
 
 # uncomment middle messages for 1-shot prompting
-def get_gsm8k_questions(split = "train") -> Dataset:
-    data = load_dataset('openai/gsm8k', 'main')[split] # type: ignore
+def get_gsm8k_questions(split = "train") -> MsDataset:
+    data = MsDataset.load('modelscope/gsm8k', subset_name='main', split=split, cache_dir='/root/autodl-tmp/My-Open-LLM/R1/R1-Zero/') # type: ignore
     data = data.map(lambda x: { # type: ignore
         'prompt': [
             {'role': 'system', 'content': SYSTEM_PROMPT},
@@ -76,7 +75,14 @@ def strict_format_reward_func(completions, **kwargs) -> list[float]:
     """Reward function that checks if the completion has a specific format."""
     pattern = r"^<reasoning>\n.*?\n</reasoning>\n<answer>\n.*?\n</answer>\n$"
     responses = [completion[0]["content"] for completion in completions]
-    matches = [re.match(pattern, r, flags=re.DOTALL) for r in responses] 
+    # 新增调试日志
+    matches = []
+    for idx, r in enumerate(responses):
+        print(f"\n--- Processing response {idx} ---")
+        print("Raw content:", repr(r)) # 使用 repr() 显示转义字符
+        match = re.fullmatch(pattern, r, flags=re.DOTALL)
+        print("Match result:", bool(match))
+        matches.append(match)
     return [0.5 if match else 0.0 for match in matches]
 
 def soft_format_reward_func(completions, **kwargs) -> list[float]:
@@ -125,34 +131,37 @@ training_args = GRPOConfig(
     lr_scheduler_type='cosine',
     logging_steps=1,
     bf16=True,
-    per_device_train_batch_size=16,
+    per_device_train_batch_size=8,
     gradient_accumulation_steps=4,
-    num_generations=16,
+    num_generations=8,
     max_prompt_length=256,
     max_completion_length=786,
     num_train_epochs=1,
     save_steps=100,
     max_grad_norm=0.1,
-    # report_to="wandb",
+    report_to="wandb",
     log_on_each_node=False,
+    use_vllm=True,
+    vllm_gpu_memory_utilization=.2,
+    vllm_device="cuda:0",
 )
-peft_config = LoraConfig(
-    r=16,
-    lora_alpha=64,
-    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "up_proj", "down_proj", "gate_proj"],
-    task_type="CAUSAL_LM",
-    lora_dropout=0.05,
-)
+# peft_config = LoraConfig(
+#     r=16,
+#     lora_alpha=64,
+#     target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "up_proj", "down_proj", "gate_proj"],
+#     task_type="CAUSAL_LM",
+#     lora_dropout=0.05,
+# )
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
     torch_dtype=torch.bfloat16,
-    attn_implementation="flash_attention_2",
+    cache_dir='/root/autodl-tmp/My-Open-LLM/R1/R1-Zero/',
+    # attn_implementation="flash_attention_2",
     device_map=None
 ).to("cuda")
         
-tokenizer = AutoTokenizer.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir='/root/autodl-tmp/My-Open-LLM/R1/R1-Zero/')
 tokenizer.pad_token = tokenizer.eos_token
-tokenizer.padding_side  = 'left'
 
 # use peft at your own risk; not working for me with multi-GPU training
 trainer = GRPOTrainer(
