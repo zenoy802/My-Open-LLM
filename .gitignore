@@ -398,3 +398,11 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+
+# R1 
+downloads/
+modelscope___gsm8k/
+outputs/
+wandb/
+*.lock
